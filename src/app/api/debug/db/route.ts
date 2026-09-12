@@ -49,10 +49,15 @@ export async function GET() {
       'PushSubscription',
     ]
 
+    // Use type assertion for dynamic table access
+    const dbAny = db as unknown as Record<
+      string,
+      { count: () => Promise<number> }
+    >
+
     for (const table of tableNames) {
       try {
-        // @ts-expect-error - dynamic table name
-        const count = await db[table].count()
+        const count = await dbAny[table].count()
         results.tables[table] = count
       } catch (err) {
         results.tables[table] = `ERROR: ${
