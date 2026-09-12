@@ -1,0 +1,71 @@
+{
+  "name": "Santé Pontanegra",
+  "short_name": "Santé PN",
+  "description": "Plateforme de santé numérique pour Pointe-Noire, Congo. Médecin IA, centres de santé, dossier médical, vaccination.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#daeef6",
+  "theme_color": "#0d7a5f",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Médecin IA",
+      "short_name": "Médecin",
+      "description": "Parler à l'assistant médical",
+      "url": "/medecin?source=shortcut",
+      "icons": [
+        { "src": "/icons/icon-192x192.png", "sizes": "192x192" }
+      ]
+    },
+    {
+      "name": "Centres de santé",
+      "short_name": "Centres",
+      "description": "Trouver un centre près de vous",
+      "url": "/centres?source=shortcut",
+      "icons": [
+        { "src": "/icons/icon-192x192.png", "sizes": "192x192" }
+      ]
+    },
+    {
+      "name": "Communauté",
+      "short_name": "Communauté",
+      "description": "Échanger avec d'autres utilisateurs",
+      "url": "/communaute?source=shortcut",
+      "icons": [
+        { "src": "/icons/icon-192x192.png", "sizes": "192x192" }
+      ]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

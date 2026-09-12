@@ -150,8 +150,61 @@
   .bg-emergency-gradient {
     background: linear-gradient(135deg, #e53935 0%, #ef5350 100%);
   }
-  /* Safe area for mobile bottom nav */
+  /* Safe area for mobile (iOS notch, Android nav bar) */
+  .pt-safe {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
   .pb-safe {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  .pl-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  .pr-safe {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .h-safe-top {
+    height: env(safe-area-inset-top);
+  }
+  /* App-like tap feedback */
+  .tap-feedback {
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .tap-feedback:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+  /* Hide scrollbars on mobile horizontal lists */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Disable text selection on UI elements (app-like feel) */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  [role='button'],
+  a {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+}
+
+/* iOS: prevent double-tap zoom on buttons */
+button,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* PWA standalone: prevent pull-to-refresh when installed */
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: none;
   }
 }

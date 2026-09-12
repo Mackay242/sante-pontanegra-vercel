@@ -81,3 +81,80 @@ Stage Summary:
 - ✅ 48 tests passent (vs 31 avant)
 - ✅ Lint : 0 erreur
 - Statistiques finales : 20 pages, 20 routes API, 48 composants UI, 9 modèles Prisma
+
+---
+Task ID: 3
+Agent: Super Z (main)
+Task: Convertir l'app web en PWA installable sur Android/iOS (l'original était une app mobile React Native/Expo)
+
+Work Log:
+- Créé scripts/generate-icons.mjs pour générer les icônes PWA via sharp
+- Généré 6 icônes PWA dans public/icons/ :
+  - icon-192x192.png (standard)
+  - icon-512x512.png (standard)
+  - maskable-192x192.png (Android adaptive)
+  - maskable-512x512.png (Android adaptive)
+  - apple-touch-icon.png (iOS, 180x180, fond opaque)
+  - favicon-32.png
+- Créé public/manifest.json complet :
+  - name, short_name, description, start_url, scope
+  - display: standalone (mode app native)
+  - orientation: portrait (forcée verticale)
+  - theme_color, background_color
+  - 4 icônes (any + maskable)
+  - 3 raccourcis (Médecin, Centres, Communauté) accessibles depuis le menu long-clic
+- Amélioré public/sw.js (service worker v2) :
+  - Pre-cache de l'app shell (/, /dashboard, /login, /register, /offline, manifest, icons)
+  - Stratégie cache-first pour assets statiques
+  - Stratégie network-first pour API et navigations
+  - Fallback offline page HTML personnalisée
+  - Push notifications conservées
+  - Nettoyage automatique des anciens caches
+- Créé src/app/offline/page.tsx (page hors ligne) + layout.tsx (metadata)
+- Mis à jour src/app/layout.tsx avec tous les meta tags PWA/iOS :
+  - manifest: /manifest.json
+  - appleWebApp: capable, title, statusBarStyle, startupImage
+  - viewport: viewportFit cover (safe-area), themeColor light/dark
+  - icons: favicon, apple-touch-icon, icon.svg
+  - openGraph: image 512x512
+  - applicationName, formatDetection
+- Ajouté meta manuels dans <head> pour compatibilité maximale iOS
+- Créé src/components/pwa-installer.tsx :
+  - Capture l'événement beforeinstallprompt (Android/Chrome)
+  - Affiche une bannière d'installation après 8s (configurable)
+  - Détection iOS séparée avec instructions "Partager → Sur l'écran d'accueil"
+  - Dismiss persistant 7 jours (localStorage)
+  - Désactivé en dev (NODE_ENV=development)
+  - Détecte si déjà installé (display-mode: standalone / navigator.standalone)
+- Ajouté PWAInstaller dans le layout racine
+- Mis à jour globals.css avec :
+  - Classes safe-area (pt-safe, pb-safe, pl-safe, pr-safe, h-safe-top)
+  - tap-feedback (effet tactile type app native)
+  - no-scrollbar (listes horizontales)
+  - Désactivation tap-highlight, callout sur mobile
+  - touch-action: manipulation sur boutons (anti double-tap zoom)
+  - overscroll-behavior-y: none en mode standalone (anti pull-to-refresh)
+- Mis à jour navbar BottomNav : backdrop-blur renforcé, tap-feedback, safe-area
+- Mis à jour AppShell : spacer safe-area-top visible seulement en mode standalone
+- Mis à jour landing page header : pt-safe pour notch/dynamic island
+- Lint : 0 erreur
+- Vérification mobile via Agent Browser (iPhone 16 Pro viewport) :
+  - Toutes les routes PWA répondent en HTTP 200
+  - Manifest, sw.js, icônes, offline page tous accessibles
+  - Service worker actif (scope /)
+  - <link rel=manifest>, meta apple-mobile-web-app-capable, meta theme-color présents dans le HTML
+- Vérification visuelle via VLM (z-ai vision) : interface mobile complète et professionnelle décrite
+
+Stage Summary:
+- ✅ PWA complète et installable sur Android/iOS
+- ✅ Mode standalone (affichage type app native, sans barre navigateur)
+- ✅ Icônes adaptatives (Android maskable + iOS apple-touch)
+- ✅ Service worker v2 avec cache offline + strategies
+- ✅ Page hors ligne personnalisée
+- ✅ Meta tags Apple/iOS complets (safe-area, status bar, standalone)
+- ✅ Prompt d'installation PWA (Android) + instructions iOS
+- ✅ UX mobile native : tap-feedback, safe-area, anti pull-to-refresh, anti double-tap zoom
+- ✅ Raccourcis app (Médecin, Centres, Communauté) via long-clic sur l'icône
+- ✅ Lint : 0 erreur
+- ✅ Toutes les routes PWA en HTTP 200
+- L'app peut être installée sur téléphone via "Ajouter à l'écran d'accueil"

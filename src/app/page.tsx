@@ -31,7 +31,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur pt-safe">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-medical-gradient">
@@ -44,13 +44,13 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted tap-feedback"
             >
               Connexion
             </Link>
             <Link
               href="/register"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 tap-feedback"
             >
               Créer un compte
             </Link>

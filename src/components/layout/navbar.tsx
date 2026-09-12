@@ -18,10 +18,10 @@ export function BottomNav() {
   const pathname = usePathname()
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden pb-safe"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 backdrop-blur-lg shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:hidden pb-safe"
       aria-label="Navigation principale"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-5 pt-1">
         {TABS.map((tab) => {
           const Icon = tab.icon
           const active =
@@ -32,14 +32,14 @@ export function BottomNav() {
               <Link
                 href={tab.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
+                  'flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium tap-feedback transition-colors',
                   active
                     ? 'text-primary'
-                    : 'text-muted-foreground hover:text-primary'
+                    : 'text-muted-foreground active:text-primary'
                 )}
               >
                 <Icon
-                  className={cn('h-5 w-5', active && 'fill-primary/10')}
+                  className={cn('h-5 w-5', active && 'fill-primary/15')}
                   strokeWidth={active ? 2.5 : 2}
                 />
                 <span className={active ? 'font-semibold' : ''}>{tab.label}</span>
