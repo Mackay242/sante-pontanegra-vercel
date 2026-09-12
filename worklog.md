@@ -29,3 +29,55 @@ Stage Summary:
 - Toutes les API validées avec Zod, autorisations par propriétaire, cookies httpOnly sécurisés
 - 31 tests passent : validation, auth, bot
 - Vérifié via Agent Browser : home, login, register, dashboard, centres, medecin (chat fonctionnel), communaute, videos, dossier, rendezvous, vaccination
+
+---
+Task ID: 2
+Agent: Super Z (main)
+Task: Réaliser toutes les étapes recommandées : tests approfondis, préparation Vercel, migration PostgreSQL, intégration LLM, extension des rôles, notifications push.
+
+Work Log:
+- Tests approfondis via Agent Browser sur 19 pages : 0 erreur runtime
+- Tests API complets : auth, posts, appointments, vaccinations, pregnancies, dossier — tous 200/201
+- Préparation déploiement Vercel : git déjà initialisé, ajouté vercel.json, .env.example complet
+- Migration PostgreSQL : créé prisma/schema.postgres.prisma (variante production)
+- Intégration LLM via z-ai-web-dev-sdk pour le chat médecin :
+  - Créé src/lib/llm.ts avec system prompt médical contextualisé Congo
+  - Modifié /api/chat pour utiliser le LLM (avec fallback rule-based)
+  - Testé : réponses pertinentes sur fièvre, paludisme, pédiatrie
+  - Ajouté ENABLE_LLM_CHAT env var (désactivé par défaut)
+- Extension du système de rôles (4 rôles hiérarchiques) :
+  - Créé src/lib/roles.ts (USER, NURSE, DOCTOR, ADMIN)
+  - Matrice de permissions fine-grained (12 permissions)
+  - Ajouté requireRole(), hasMinimumRole(), isMedicalRole()
+  - Mis à jour auth.ts, auth-provider.tsx pour support Role
+- Créé /admin (panneau d'administration) :
+  - GET /api/admin/users (liste)
+  - PATCH /api/admin/users/[id] (changement rôle + spécialité)
+  - Protection anti-auto-rétrogradation
+  - UI avec stats, badges colorés par rôle, select de rôle
+- Notifications push navigateur (Web Push API) :
+  - Installé web-push
+  - Créé src/lib/push.ts (saveSubscription, sendPushToUser)
+  - Créé /api/push/subscribe, /api/push/test
+  - Créé public/sw.js (service worker pour les notifications)
+  - Créé src/hooks/use-push.ts (hook React client)
+  - Intégré dans page Parametres (activation, test, statut)
+- Mis à jour Prisma schema : ajouté PushSubscription model + specialty field sur User
+- Poussé le schéma à jour dans SQLite local
+- Mis à jour profil page (badges de rôle colorés)
+- Ajouté tests/roles.test.ts (17 nouveaux tests)
+- 48 tests passent au total
+- Mis à jour README.md avec toutes les nouvelles fonctionnalités
+- Commit git effectué
+
+Stage Summary:
+- ✅ Tests approfondis : 19 pages, 0 erreur
+- ✅ Préparation Vercel : vercel.json, .env.example complet, .gitignore
+- ✅ Migration PostgreSQL : schema.postgres.prisma prêt pour production
+- ✅ LLM intégré : z-ai-web-dev-sdk côté serveur avec fallback
+- ✅ 4 rôles : USER, NURSE, DOCTOR, ADMIN + 12 permissions
+- ✅ Panneau admin : /admin avec gestion utilisateurs
+- ✅ Notifications push : Web Push API + service worker + VAPID
+- ✅ 48 tests passent (vs 31 avant)
+- ✅ Lint : 0 erreur
+- Statistiques finales : 20 pages, 20 routes API, 48 composants UI, 9 modèles Prisma
