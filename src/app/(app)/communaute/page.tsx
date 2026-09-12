@@ -1,66 +1,41 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
   MessageSquare,
-  Heart,
-  Send,
-  Trash2,
-  Plus,
   Loader2,
+  Pin,
+  Calendar,
+  Users,
+  Stethoscope,
 } from 'lucide-react'
 import { AppHeader } from '@/components/layout/navbar'
 import { useAuth } from '@/components/auth-provider'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states'
 import { useToast } from '@/hooks/use-toast'
+import { PostCard, type Post } from '@/components/community/post-card'
+import { PostComposer } from '@/components/community/post-composer'
 import { cn } from '@/lib/utils'
+import type { Role } from '@/lib/roles'
 
-type Post = {
+type ReactionType = 'like' | 'thanks' | 'useful' | 'support' | 'share'
+
+type Tab = {
   id: string
-  title: string
-  content: string
-  category: string
-  authorName: string
-  authorId: string
-  likes: number
-  likedBy: string[]
-  comments: Comment[]
-  createdAt: string
+  label: string
+  icon: React.ElementType
 }
 
-type Comment = {
-  id: string
-  authorName: string
-  content: string
-  createdAt: string
-}
-
-const CATEGORIES = [
-  { id: 'tous', label: 'Tous' },
-  { id: 'general', label: 'Général' },
-  { id: 'sante', label: 'Santé' },
-  { id: 'maternite', label: 'Maternité' },
-  { id: 'urgence', label: 'Urgences' },
-  { id: 'nutrition', label: 'Nutrition' },
+const TABS: Tab[] = [
+  { id: 'all', label: 'Tous', icon: MessageSquare },
+  { id: 'medical', label: 'Conseils médecins', icon: Stethoscope },
+  { id: 'questions', label: 'Questions', icon: MessageSquare },
+  { id: 'pinned', label: 'Épinglés', icon: Pin },
+  { id: 'doctors', label: 'Médecins à suivre', icon: Users },
+  { id: 'ama', label: 'AMA', icon: Calendar },
 ]
 
 export default function CommunautePage() {
@@ -69,24 +44,26 @@ export default function CommunautePage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeCategory, setActiveCategory] = useState('tous')
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [newPost, setNewPost] = useState({
-    title: '',
-    content: '',
-    category: 'general' as 'general' | 'sante' | 'maternite' | 'urgence' | 'nutrition',
-  })
+  const [activeTab, setActiveTab] = useState('all')
 
   useEffect(() => {
-    loadPosts()
-  }, [])
+    if (activeTab !== 'doctors' && activeTab !== 'ama') {
+      loadPosts()
+    }
+  }, [activeTab])
 
   async function loadPosts() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/posts', { cache: 'no-store' })
+      const params = new URLSearchParams()
+      if (activeTab === 'medical') params.set('medicalOnly', 'true')
+      if (activeTab === 'questions') params.set('postType', 'question')
+      if (activeTab === 'pinned') params.set('pinnedOnly', 'true')
+
+      const res = await fetch(`/api/posts?${params.toString()}`, {
+        cache: 'no-store',
+      })
       if (!res.ok) throw new Error()
       const data = await res.json()
       setPosts(data.posts)
@@ -97,55 +74,75 @@ export default function CommunautePage() {
     }
   }
 
-  async function handleCreatePost(e: React.FormEvent) {
-    e.preventDefault()
-    if (!user) return
-    setSubmitting(true)
+  async function handleCreatePost(data: {
+    title: string
+    content: string
+    category: string
+    postType: string
+    mediaUrl?: string
+    mediaType?: string
+  }): Promise<boolean> {
+    if (!user) return false
     try {
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPost),
+        body: JSON.stringify(data),
       })
-      const data = await res.json()
+      const result = await res.json()
       if (!res.ok) {
         toast({
           title: 'Erreur',
-          description: data.message ?? 'Publication impossible.',
+          description: result.message ?? 'Publication impossible.',
           variant: 'destructive',
         })
-        return
+        return false
       }
-      setPosts((p) => [{ ...data.post, comments: [] }, ...p])
-      setNewPost({ title: '', content: '', category: 'general' })
-      setDialogOpen(false)
+      setPosts((p) => [
+        {
+          ...result.post,
+          comments: [],
+          reactionCounts: { like: 0, thanks: 0, useful: 0, support: 0, share: 0 },
+        },
+        ...p,
+      ])
       toast({ title: 'Publié !', description: 'Votre message est en ligne.' })
-    } finally {
-      setSubmitting(false)
+      return true
+    } catch {
+      toast({
+        title: 'Erreur réseau',
+        variant: 'destructive',
+      })
+      return false
     }
   }
 
-  async function handleLike(postId: string) {
+  async function handleReact(postId: string, type: ReactionType) {
     if (!user) return
     // Optimistic update
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id !== postId) return p
-        const already = p.likedBy.includes(user.id)
-        return {
-          ...p,
-          likes: already ? p.likes - 1 : p.likes + 1,
-          likedBy: already
-            ? p.likedBy.filter((id) => id !== user.id)
-            : [...p.likedBy, user.id],
-        }
+        const counts = { ...p.reactionCounts }
+        // For simplicity, just increment for now (toggle is handled by API)
+        counts[type] = (counts[type] ?? 0) + 1
+        return { ...p, reactionCounts: counts }
       })
     )
     try {
-      await fetch(`/api/posts/${postId}/like`, { method: 'POST' })
-    } catch {
-      // Revert on error
+      await fetch(`/api/posts/${postId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      })
+      // Reload to get accurate counts (could be optimized)
       loadPosts()
+    } catch {
+      toast({
+        title: 'Erreur',
+        description: 'Réaction impossible.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -165,6 +162,38 @@ export default function CommunautePage() {
     }
   }
 
+  async function handlePin(postId: string) {
+    try {
+      const res = await fetch(`/api/posts/${postId}/pin`, { method: 'POST' })
+      if (!res.ok) throw new Error()
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, pinned: !p.pinned } : p
+        )
+      )
+      toast({
+        title: 'Mis à jour',
+        description: 'Statut d\'épinglage modifié.',
+      })
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' })
+    }
+  }
+
+  async function handleSolve(postId: string) {
+    try {
+      const res = await fetch(`/api/posts/${postId}/solve`, { method: 'POST' })
+      if (!res.ok) throw new Error()
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, solved: !p.solved } : p
+        )
+      )
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' })
+    }
+  }
+
   async function handleComment(postId: string, content: string) {
     if (!user || !content.trim()) return
     try {
@@ -177,7 +206,17 @@ export default function CommunautePage() {
       if (!res.ok) throw new Error()
       setPosts((prev) =>
         prev.map((p) =>
-          p.id === postId ? { ...p, comments: [...p.comments, data.comment] } : p
+          p.id === postId
+            ? {
+                ...p,
+                comments: [...p.comments, data.comment],
+                solved:
+                  p.postType === 'question' &&
+                  ['DOCTOR', 'NURSE'].includes(user.role)
+                    ? true
+                    : p.solved,
+              }
+            : p
         )
       )
     } catch {
@@ -189,120 +228,55 @@ export default function CommunautePage() {
     }
   }
 
-  const visiblePosts =
-    activeCategory === 'tous'
-      ? posts
-      : posts.filter((p) => p.category === activeCategory)
+  const canPostAlert =
+    user?.role === 'DOCTOR' || user?.role === 'NURSE' || user?.role === 'ADMIN'
 
   return (
     <>
       <AppHeader
         title="Communauté"
-        subtitle="Échangez avec d'autres habitants sur la santé au quotidien"
+        subtitle="Échangez patients et personnel soignant"
         backHref="/dashboard"
       />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => (
-            <Button
-              key={c.id}
-              size="sm"
-              variant={activeCategory === c.id ? 'default' : 'outline'}
-              onClick={() => setActiveCategory(c.id)}
-            >
-              {c.label}
-            </Button>
-          ))}
+      {/* Tabs */}
+      <div className="mb-4 overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 pb-1">
+          {TABS.map((tab) => {
+            const Icon = tab.icon
+            return (
+              <Button
+                key={tab.id}
+                size="sm"
+                variant={activeTab === tab.id ? 'default' : 'outline'}
+                onClick={() => setActiveTab(tab.id)}
+                className="whitespace-nowrap"
+              >
+                <Icon className="mr-1 h-4 w-4" />
+                {tab.label}
+              </Button>
+            )
+          })}
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-1 h-4 w-4" />
-              Nouvelle publication
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Partager avec la communauté</DialogTitle>
-              <DialogDescription>
-                Votre message sera visible par tous les membres.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreatePost} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre</Label>
-                <Input
-                  id="title"
-                  required
-                  placeholder="Sujet de votre publication"
-                  value={newPost.title}
-                  onChange={(e) =>
-                    setNewPost((p) => ({ ...p, title: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Catégorie</Label>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.filter((c) => c.id !== 'tous').map((c) => (
-                    <Button
-                      key={c.id}
-                      type="button"
-                      size="sm"
-                      variant={newPost.category === c.id ? 'default' : 'outline'}
-                      onClick={() =>
-                        setNewPost((p) => ({
-                          ...p,
-                          category: c.id as typeof newPost.category,
-                        }))
-                      }
-                    >
-                      {c.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="content">Contenu</Label>
-                <Textarea
-                  id="content"
-                  required
-                  rows={4}
-                  placeholder="Votre message…"
-                  value={newPost.content}
-                  onChange={(e) =>
-                    setNewPost((p) => ({ ...p, content: e.target.value }))
-                  }
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Annuler
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? (
-                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-1 h-4 w-4" />
-                  )}
-                  Publier
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      {loading ? (
+      {/* Composer (only on regular tabs, not on doctors/ama) */}
+      {activeTab !== 'doctors' && activeTab !== 'ama' && (
+        <div className="mb-4 flex justify-end">
+          <PostComposer canPostAlert={!!canPostAlert} onSubmit={handleCreatePost} />
+        </div>
+      )}
+
+      {/* Content per tab */}
+      {activeTab === 'doctors' ? (
+        <DoctorsList currentUserId={user?.id} />
+      ) : activeTab === 'ama' ? (
+        <AMAList />
+      ) : loading ? (
         <LoadingState message="Chargement des publications…" />
       ) : error ? (
         <ErrorState message={error} onRetry={loadPosts} />
-      ) : visiblePosts.length === 0 ? (
+      ) : posts.length === 0 ? (
         <EmptyState
           title="Aucune publication"
           description="Soyez le premier à partager une information santé avec la communauté."
@@ -310,14 +284,17 @@ export default function CommunautePage() {
         />
       ) : (
         <div className="space-y-4">
-          {visiblePosts.map((p) => (
+          {posts.map((p) => (
             <PostCard
               key={p.id}
               post={p}
               currentUserId={user?.id}
-              onLike={() => handleLike(p.id)}
-              onDelete={() => handleDelete(p.id)}
-              onComment={(content) => handleComment(p.id, content)}
+              currentUserRole={user?.role as Role}
+              onDelete={handleDelete}
+              onComment={handleComment}
+              onPin={canPostAlert ? handlePin : undefined}
+              onSolve={handleSolve}
+              onReact={handleReact}
             />
           ))}
         </div>
@@ -326,125 +303,256 @@ export default function CommunautePage() {
   )
 }
 
-function PostCard({
-  post,
-  currentUserId,
-  onLike,
-  onDelete,
-  onComment,
-}: {
-  post: Post
-  currentUserId?: string
-  onLike: () => void
-  onDelete: () => void
-  onComment: (content: string) => void
-}) {
-  const [comment, setComment] = useState('')
-  const [showComments, setShowComments] = useState(false)
-  const liked = currentUserId ? post.likedBy.includes(currentUserId) : false
-  const canDelete = currentUserId === post.authorId
+// ─── Doctors list tab ───────────────────────────────────────
+
+function DoctorsList({ currentUserId }: { currentUserId?: string }) {
+  const { toast } = useToast()
+  const [doctors, setDoctors] = useState<
+    Array<{
+      id: string
+      name: string
+      email: string
+      role: Role
+      specialty: string | null
+      bio: string | null
+      avatarUrl: string | null
+      followersCount: number
+      postsCount: number
+    }>
+  >([])
+  const [followingIds, setFollowingIds] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [following, setFollowing] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function load() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/users/doctors', { cache: 'no-store' })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setDoctors(data.doctors)
+      setFollowingIds(data.followingIds ?? [])
+      const followingMap: Record<string, boolean> = {}
+      data.doctors.forEach((d: { id: string }) => {
+        followingMap[d.id] = (data.followingIds ?? []).includes(d.id)
+      })
+      setFollowing(followingMap)
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleFollow(doctorId: string) {
+    try {
+      const res = await fetch(`/api/users/${doctorId}/follow`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error()
+      setFollowing((f) => ({ ...f, [doctorId]: data.following }))
+      setDoctors((prev) =>
+        prev.map((d) =>
+          d.id === doctorId
+            ? {
+                ...d,
+                followersCount: d.followersCount + (data.following ? 1 : -1),
+              }
+            : d
+        )
+      )
+      toast({
+        title: data.following ? 'Abonné !' : 'Désabonné',
+      })
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' })
+    }
+  }
+
+  if (loading) return <LoadingState message="Chargement du personnel médical…" />
+
+  if (doctors.length === 0) {
+    return (
+      <EmptyState
+        title="Aucun personnel médical inscrit"
+        description="Les médecins et infirmiers apparaîtront ici une fois inscrits."
+        icon={<Stethoscope className="h-5 w-5" />}
+      />
+    )
+  }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold">{post.title}</h3>
-            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary" className="capitalize">
-                {post.category}
-              </Badge>
-              <span>par {post.authorName}</span>
-              <span>·</span>
-              <span>{formatDate(post.createdAt)}</span>
+    <div className="space-y-3">
+      {doctors.map((d) => (
+        <Card key={d.id}>
+          <CardContent className="flex items-start gap-3 p-4">
+            <div
+              className={cn(
+                'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-medical-gradient text-lg font-bold text-white',
+                d.role === 'DOCTOR' && 'ring-2 ring-primary ring-offset-2',
+                d.role === 'NURSE' && 'ring-2 ring-blue-500 ring-offset-2'
+              )}
+            >
+              {d.name.charAt(0).toUpperCase()}
             </div>
-          </div>
-          {canDelete && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-              onClick={onDelete}
-              aria-label="Supprimer"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <p className="whitespace-pre-wrap text-sm">{post.content}</p>
-
-        <div className="mt-4 flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={liked ? 'default' : 'outline'}
-            onClick={onLike}
-          >
-            <Heart
-              className={cn('mr-1 h-4 w-4', liked && 'fill-current')}
-            />
-            {post.likes}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowComments((v) => !v)}
-          >
-            <MessageSquare className="mr-1 h-4 w-4" />
-            {post.comments.length}
-          </Button>
-        </div>
-
-        {showComments && (
-          <div className="mt-4 space-y-3 border-t pt-3">
-            {post.comments.map((c) => (
-              <div key={c.id} className="rounded-lg bg-muted/50 p-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    {c.authorName}
-                  </span>
-                  <span>·</span>
-                  <span>{formatDate(c.createdAt)}</span>
-                </div>
-                <p className="mt-1 text-sm">{c.content}</p>
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">{d.name}</span>
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                    d.role === 'DOCTOR'
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                  )}
+                >
+                  {d.role === 'DOCTOR' ? 'Dr.' : 'Infirmier(ère)'}
+                  {d.specialty && (
+                    <span className="font-normal opacity-80">· {d.specialty}</span>
+                  )}
+                </span>
               </div>
-            ))}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                onComment(comment)
-                setComment('')
-              }}
-              className="flex gap-2"
-            >
-              <Input
-                placeholder="Ajouter un commentaire…"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <Button type="submit" size="icon" disabled={!comment.trim()}>
-                <Send className="h-4 w-4" />
+              {d.bio && (
+                <p className="mt-1 text-sm text-muted-foreground">{d.bio}</p>
+              )}
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                <span>📝 {d.postsCount} publications</span>
+                <span>👥 {d.followersCount} abonné{d.followersCount > 1 ? 's' : ''}</span>
+              </div>
+            </div>
+            {currentUserId && currentUserId !== d.id && (
+              <Button
+                size="sm"
+                variant={following[d.id] ? 'default' : 'outline'}
+                onClick={() => handleFollow(d.id)}
+              >
+                {following[d.id] ? '✓ Suivi' : '+ Suivre'}
               </Button>
-            </form>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = (now.getTime() - d.getTime()) / 1000
-  if (diff < 60) return 'à l\'instant'
-  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
-  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`
-  return d.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+// ─── AMA list tab ───────────────────────────────────────────
+
+function AMAList() {
+  const [sessions, setSessions] = useState<
+    Array<{
+      id: string
+      title: string
+      description: string
+      startsAt: string
+      endsAt: string
+      isLive: boolean
+      isFinished: boolean
+      host: {
+        id: string
+        name: string
+        role: Role
+        specialty: string | null
+      }
+      _count: { questions: number }
+    }>
+  >([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function load() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/ama', { cache: 'no-store' })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setSessions(data.sessions)
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) return <LoadingState message="Chargement des AMA…" />
+
+  if (sessions.length === 0) {
+    return (
+      <EmptyState
+        title="Aucune AMA programmée"
+        description="Les sessions Ask Me Anything organisées par les médecins apparaîtront ici."
+        icon={<Calendar className="h-5 w-5" />}
+        action={
+          <Link href="/dashboard">
+            <Button size="sm" variant="outline">
+              Retour au dashboard
+            </Button>
+          </Link>
+        }
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {sessions.map((s) => {
+        const start = new Date(s.startsAt)
+        const end = new Date(s.endsAt)
+        const now = new Date()
+        const isUpcoming = start > now
+        const isLiveNow = s.isLive && !s.isFinished
+        const isPast = end < now || s.isFinished
+
+        return (
+          <Link key={s.id} href={`/ama/${s.id}`}>
+            <Card className="cursor-pointer transition hover:shadow-md">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold">{s.title}</h3>
+                      {isLiveNow && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white animate-pulse">
+                          🔴 LIVE
+                        </span>
+                      )}
+                      {isUpcoming && (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                          À venir
+                        </span>
+                      )}
+                      {isPast && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                          Terminé
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                      {s.description}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {s.host.name}
+                      </span>
+                      {s.host.specialty && <span>· {s.host.specialty}</span>}
+                      <span>· 📅 {start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à {start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>· 💬 {s._count.questions} questions</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )
+      })}
+    </div>
+  )
 }

@@ -1,9 +1,5 @@
-// Prisma schema for SantePontaNegra — LOCAL DEVELOPMENT (SQLite)
-// Use this for local development. For production (Vercel), use schema.prisma (PostgreSQL).
-//
-// To switch back to SQLite locally:
-//   cp prisma/schema.sqlite.prisma prisma/schema.prisma
-//   bun run db:push
+// Prisma schema for SantePontaNegra — PostgreSQL (Vercel production)
+// Use this for production deployment (Neon / Supabase / Vercel Postgres)
 
 generator client {
   provider = "prisma-client-js"
@@ -24,49 +20,142 @@ model User {
   passwordHash String
   role         String   @default("USER") // USER | DOCTOR | NURSE | ADMIN
   specialty    String?
+  bio          String?
+  avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  posts        Post[]
-  appointments Appointment[]
-  dossier      MedicalDossier?
-  messages     ChatMessage[]
-  vaccinations Vaccination[]
-  pregnancies  Pregnancy[]
-  pushSubs     PushSubscription[]
+  posts          Post[]
+  comments       Comment[]
+  appointments   Appointment[]
+  dossier        MedicalDossier?
+  messages       ChatMessage[]
+  vaccinations   Vaccination[]
+  pregnancies    Pregnancy[]
+  pushSubs       PushSubscription[]
+  reactions      Reaction[]
+  following      Follow[]      @relation("Follower")
+  followers      Follow[]      @relation("Following")
+  amaSessions    AMA[]
+  amaQuestions   AMAQuestion[]
 }
 
-// ─── Community ───────────────────────────────────────────────
+// ─── Community Posts ───────────────────────────────────────
 
 model Post {
-  id         String   @id @default(cuid())
-  title      String
-  content    String
-  category   String   @default("general")
-  authorName String
-  authorId   String
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  likes      Int      @default(0)
-  likedBy    String   @default("[]")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  category     String   @default("general") // general | sante | maternite | urgence | nutrition
+  postType     String   @default("post") // post | question | ama | alert
+  authorName   String
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes        Int      @default(0)
+  likedBy      String   @default("[]") // JSON array of user IDs (legacy, kept for compat)
+  pinned       Boolean  @default(false)
+  solved       Boolean  @default(false)
+  // Media (video URL or image URL)
+  mediaUrl     String?
+  mediaType    String?  // image | video | youtube
+  mediaThumbnail String?
+  // AMA-related
+  amaStartsAt  DateTime?
+  amaEndsAt    DateTime?
+  amaLive      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  comments Comment[]
+  comments  Comment[]
+  reactions Reaction[]
 
   @@index([authorId])
   @@index([category])
+  @@index([postType])
+  @@index([pinned])
 }
 
 model Comment {
+  id              String   @id @default(cuid())
+  postId          String
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorName      String
+  authorId        String
+  author          User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content         String
+  isMedicalAnswer Boolean  @default(false)
+  pinned          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+// ─── Reactions (5 types: like, thanks, useful, support, share) ──
+
+model Reaction {
   id        String   @id @default(cuid())
   postId    String
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorName String
-  authorId  String
-  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // like | thanks | useful | support | share
   createdAt DateTime @default(now())
 
+  @@unique([postId, userId]) // one reaction per user per post
   @@index([postId])
+  @@index([userId])
+}
+
+// ─── Follow system ─────────────────────────────────────────
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// ─── AMA (Ask Me Anything) ─────────────────────────────────
+
+model AMA {
+  id          String   @id @default(cuid())
+  hostId      String
+  host        User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  startsAt    DateTime
+  endsAt      DateTime
+  isLive      Boolean  @default(false)
+  isFinished  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  questions AMAQuestion[]
+
+  @@index([hostId])
+  @@index([startsAt])
+}
+
+model AMAQuestion {
+  id        String   @id @default(cuid())
+  amaId     String
+  ama       AMA      @relation(fields: [amaId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  votes     Int      @default(0)
+  answered  Boolean  @default(false)
+  answer    String?
+  createdAt DateTime @default(now())
+
+  @@index([amaId])
+  @@index([authorId])
 }
 
 // ─── Medical ─────────────────────────────────────────────────
@@ -92,7 +181,7 @@ model Appointment {
   centreName  String
   date        DateTime
   motif       String
-  status      String   @default("pending")
+  status      String   @default("pending") // pending | confirmed | cancelled | completed
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -131,7 +220,7 @@ model ChatMessage {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String
+  role      String   // user | bot
   content   String
   createdAt DateTime @default(now())
 
