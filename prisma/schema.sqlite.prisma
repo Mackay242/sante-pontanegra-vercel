@@ -1,0 +1,153 @@
+// Prisma schema for SantePontaNegra — LOCAL DEVELOPMENT (SQLite)
+// Use this for local development. For production (Vercel), use schema.prisma (PostgreSQL).
+//
+// To switch back to SQLite locally:
+//   cp prisma/schema.sqlite.prisma prisma/schema.prisma
+//   bun run db:push
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ───────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  phone        String?
+  passwordHash String
+  role         String   @default("USER") // USER | DOCTOR | NURSE | ADMIN
+  specialty    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  posts        Post[]
+  appointments Appointment[]
+  dossier      MedicalDossier?
+  messages     ChatMessage[]
+  vaccinations Vaccination[]
+  pregnancies  Pregnancy[]
+  pushSubs     PushSubscription[]
+}
+
+// ─── Community ───────────────────────────────────────────────
+
+model Post {
+  id         String   @id @default(cuid())
+  title      String
+  content    String
+  category   String   @default("general")
+  authorName String
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes      Int      @default(0)
+  likedBy    String   @default("[]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  comments Comment[]
+
+  @@index([authorId])
+  @@index([category])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorName String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+// ─── Medical ─────────────────────────────────────────────────
+
+model MedicalDossier {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupeSanguin       String?
+  allergies           String   @default("[]")
+  maladiesChroniques  String   @default("[]")
+  antecedents         String   @default("[]")
+  medicamentsActuels  String   @default("[]")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  centreId    String
+  centreName  String
+  date        DateTime
+  motif       String
+  status      String   @default("pending")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Vaccination {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vaccine   String
+  date      DateTime
+  nextDue   DateTime?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Pregnancy {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate      DateTime
+  expectedBirth  DateTime
+  weeks         Int      @default(0)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Push notifications ─────────────────────────────────────
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}

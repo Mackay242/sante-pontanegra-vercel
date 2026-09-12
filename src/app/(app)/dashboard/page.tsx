@@ -17,7 +17,8 @@ import { useAuth } from '@/components/auth-provider'
 import { AppHeader } from '@/components/layout/navbar'
 import { ServiceCard } from '@/components/shared/service-card'
 import { EmergencyCard } from '@/components/shared/emergency-card'
-import { PROMO_ITEM, PARTNER, SERVICES } from '@/lib/data/app'
+import { AdCarousel, SponsorCarousel } from '@/components/shared/carousel'
+import { ADS, SPONSORS, SERVICES } from '@/lib/data/app'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function DashboardPage() {
@@ -75,48 +76,23 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <EmergencyCard />
 
-        {/* Promo */}
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Pill className="h-4 w-4 text-primary" />
-              Offre du jour
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-bold">{PROMO_ITEM.name}</p>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-bold text-primary">
-                {PROMO_ITEM.newPrice}
-              </span>
-              <span className="text-sm text-muted-foreground line-through">
-                {PROMO_ITEM.oldPrice}
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{PROMO_ITEM.where}</p>
-          </CardContent>
-        </Card>
+        {/* Panneau publicitaire défilant */}
+        <div className="group relative">
+          <AdCarousel ads={ADS} />
+        </div>
 
-        {/* Partner */}
-        <Card className="border-primary/30 bg-medical-gradient-soft">
-          <CardHeader>
-            <CardTitle className="text-base">Notre partenaire</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold">{PARTNER.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {PARTNER.tagline}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Panneau sponsors défilant */}
+        <div className="group relative">
+          <SponsorCarousel sponsors={SPONSORS} />
+        </div>
 
         {/* Quick stats */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="text-base">Vos raccourcis</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
               {SHORTCUTS.map((s) => {
                 const Icon = s.icon
                 return (
