@@ -8,6 +8,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8)
 ![Prisma](https://img.shields.io/badge/Prisma-6-2d3748)
 ![Vercel Ready](https://img.shields.io/badge/Vercel-Ready-000)
+![Tests](https://img.shields.io/badge/tests-48%20passing-success)
 
 ## 🩺 Présentation
 
@@ -19,8 +20,9 @@ Vercel.
 ### Fonctionnalités principales
 
 - **Authentification** sécurisée (JWT, mots de passe hachés bcrypt)
+- **4 rôles utilisateur** : USER, NURSE, DOCTOR, ADMIN (avec permissions fines)
 - **Dashboard** personnel avec services, urgences, promo
-- **Médecin IA** : chat médical 24/7 avec assistant intelligent
+- **Médecin IA** : chat médical 24/7 avec **LLM via z-ai-web-dev-sdk** (ou fallback rule-based)
 - **Centres de santé** : liste des hôpitaux, cliniques et CSI de Pointe-Noire
 - **Communauté** : publications, likes, commentaires entre utilisateurs
 - **Rendez-vous** : prise de RDV dans les centres référencés
@@ -31,6 +33,8 @@ Vercel.
 - **Symptômes** : guide de reconnaissance des symptômes courants
 - **Médicaments** : guide des médicaments essentiels
 - **Alertes** : rappels de RDV, vaccins, consultations
+- **Panneau Admin** : gestion des utilisateurs et de leurs rôles
+- **Notifications push** navigateur (Web Push API + service worker)
 - **Thème clair / sombre** persistant
 - **Responsive** : mobile, tablette, ordinateur
 - **SEO** : sitemap, robots, OpenGraph, metadata complète
@@ -42,66 +46,82 @@ Vercel.
 ```
 sante-pontanegra-vercel/
 ├── prisma/
-│   └── schema.prisma          # Schéma base de données
+│   ├── schema.prisma             # Schéma SQLite (dev local)
+│   └── schema.postgres.prisma    # Schéma PostgreSQL (production Vercel)
 ├── src/
-│   ├── app/                   # Next.js App Router
-│   │   ├── (auth)/            # Pages publiques (login, register)
-│   │   ├── (app)/             # Pages authentifiées
+│   ├── app/                      # Next.js App Router
+│   │   ├── (auth)/               # Pages publiques (login, register)
+│   │   ├── (app)/                # Pages authentifiées
 │   │   │   ├── dashboard/
-│   │   │   ├── medecin/       # Chat IA
-│   │   │   ├── centres/       # Centres de santé
-│   │   │   ├── communaute/    # Communauté
-│   │   │   ├── rendezvous/    # RDV
-│   │   │   ├── dossier/       # Dossier médical
-│   │   │   ├── vaccination/   # Carnet vaccinal
-│   │   │   ├── grossesse/     # Suivi grossesse
-│   │   │   ├── videos/        # Sensibilisation
-│   │   │   ├── symptomes/     # Guide symptômes
-│   │   │   ├── medicaments/   # Guide médicaments
-│   │   │   ├── pharmacie/     # E-Pharmacie
-│   │   │   ├── alertes/       # Rappels
-│   │   │   ├── profil/        # Profil utilisateur
-│   │   │   └── parametres/    # Réglages
-│   │   ├── api/               # Route Handlers (API REST)
-│   │   │   ├── auth/          # login, register, logout, me
-│   │   │   ├── posts/         # communauté + comments + likes
-│   │   │   ├── appointments/  # rendez-vous
-│   │   │   ├── dossier/       # dossier médical
-│   │   │   ├── chat/          # chat médecin IA
-│   │   │   ├── vaccinations/  # carnet vaccinal
-│   │   │   └── pregnancies/   # suivi grossesse
-│   │   ├── layout.tsx        # Layout racine (thème, auth, fonts)
-│   │   ├── page.tsx          # Landing publique (Welcome)
-│   │   ├── sitemap.ts        # SEO
-│   │   ├── robots.ts         # SEO
-│   │   ├── not-found.tsx     # 404
-│   │   ├── error.tsx         # Error boundary
-│   │   └── globals.css       # Tailwind + thème
-│   ├── components/            # Composants réutilisables
-│   │   ├── ui/               # shadcn/ui
-│   │   ├── layout/           # Navbar, Footer, AppShell
-│   │   ├── shared/           # ServiceCard, EmergencyCard, States
-│   │   ├── auth-provider.tsx # Contexte d'auth client
+│   │   │   ├── medecin/          # Chat IA (LLM-powered)
+│   │   │   ├── centres/          # Centres de santé
+│   │   │   ├── communaute/       # Communauté
+│   │   │   ├── rendezvous/      # RDV
+│   │   │   ├── dossier/          # Dossier médical
+│   │   │   ├── vaccination/      # Carnet vaccinal
+│   │   │   ├── grossesse/        # Suivi grossesse
+│   │   │   ├── videos/           # Sensibilisation
+│   │   │   ├── symptomes/        # Guide symptômes
+│   │   │   ├── medicaments/     # Guide médicaments
+│   │   │   ├── pharmacie/        # E-Pharmacie
+│   │   │   ├── alertes/          # Rappels
+│   │   │   ├── profil/           # Profil utilisateur
+│   │   │   ├── parametres/       # Réglages + Push notifications
+│   │   │   └── admin/            # Panneau d'administration
+│   │   ├── api/                  # Route Handlers (API REST)
+│   │   │   ├── auth/             # login, register, logout, me
+│   │   │   ├── posts/            # communauté + comments + likes
+│   │   │   ├── appointments/     # rendez-vous
+│   │   │   ├── dossier/          # dossier médical
+│   │   │   ├── chat/             # chat médecin IA (LLM)
+│   │   │   ├── vaccinations/     # carnet vaccinal
+│   │   │   ├── pregnancies/      # suivi grossesse
+│   │   │   ├── push/             # notifications push (Web Push)
+│   │   │   └── admin/users/      # gestion utilisateurs (ADMIN)
+│   │   ├── layout.tsx            # Layout racine
+│   │   ├── page.tsx              # Landing publique
+│   │   ├── sitemap.ts            # SEO
+│   │   ├── robots.ts             # SEO
+│   │   ├── not-found.tsx         # 404
+│   │   ├── error.tsx             # Error boundary
+│   │   └── globals.css           # Tailwind + thème
+│   ├── components/               # Composants réutilisables
+│   │   ├── ui/                   # shadcn/ui (48 composants)
+│   │   ├── layout/               # Navbar, Footer, AppShell
+│   │   ├── shared/               # ServiceCard, EmergencyCard, States
+│   │   ├── auth-provider.tsx     # Contexte d'auth client
 │   │   └── theme-provider.tsx
 │   ├── lib/
-│   │   ├── auth.ts           # JWT + bcrypt + session
-│   │   ├── db.ts             # Client Prisma
-│   │   ├── validators.ts     # Schémas Zod
-│   │   ├── colors.ts         # Tokens de couleur
-│   │   ├── utils.ts          # Utilitaires (cn, etc.)
-│   │   └── data/             # Données statiques (centres, vidéos, bot)
+│   │   ├── auth.ts               # JWT + bcrypt + session
+│   │   ├── db.ts                 # Client Prisma
+│   │   ├── validators.ts         # Schémas Zod
+│   │   ├── roles.ts              # Définition des rôles et permissions
+│   │   ├── llm.ts                # Service LLM (z-ai-web-dev-sdk)
+│   │   ├── push.ts               # Service Web Push
+│   │   ├── colors.ts             # Tokens de couleur
+│   │   ├── utils.ts              # Utilitaires (cn, etc.)
+│   │   └── data/                 # Données statiques (centres, vidéos, bot)
 │   └── hooks/
 │       ├── use-mobile.ts
-│       └── use-toast.ts
-├── public/                   # Assets statiques
-├── .env.example              # Variables d'environnement (à copier)
+│       ├── use-toast.ts
+│       └── use-push.ts           # Hook notifications push
+├── public/
+│   └── sw.js                     # Service worker (push notifications)
+├── .env.example                  # Variables d'environnement
 ├── .gitignore
-├── next.config.ts            # Configuration Next.js
+├── vercel.json                   # Configuration Vercel
+├── next.config.ts                # Configuration Next.js
 ├── tailwind.config.ts
 ├── tsconfig.json
 ├── prisma/schema.prisma
 ├── package.json
-└── README.md
+├── README.md
+├── LICENSE
+└── tests/                        # Tests (Bun test)
+    ├── validators.test.ts
+    ├── auth.test.ts
+    ├── bot.test.ts
+    └── roles.test.ts
 ```
 
 ---
@@ -150,7 +170,7 @@ Par défaut, le projet utilise **SQLite** (via Prisma) pour un démarrage
 rapide sans configuration externe. Le fichier `db/custom.db` est créé
 automatiquement.
 
-### Production (Vercel)
+### Production (Vercel) — PostgreSQL
 
 Pour la production, **remplacez SQLite par PostgreSQL** (recommandé) :
 
@@ -159,12 +179,9 @@ Pour la production, **remplacez SQLite par PostgreSQL** (recommandé) :
    - [Supabase](https://supabase.com)
    - [Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres)
 
-2. Modifiez `prisma/schema.prisma` :
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
+2. Remplacez `prisma/schema.prisma` par `prisma/schema.postgres.prisma` :
+   ```bash
+   cp prisma/schema.postgres.prisma prisma/schema.prisma
    ```
 
 3. Mettez à jour `DATABASE_URL` sur Vercel avec votre connection string PostgreSQL.
@@ -176,7 +193,7 @@ Pour la production, **remplacez SQLite par PostgreSQL** (recommandé) :
 
 ---
 
-## 🔐 Authentification
+## 🔐 Authentification & Rôles
 
 L'authentification est **stateless** (compatible serverless Vercel) :
 
@@ -187,8 +204,66 @@ L'authentification est **stateless** (compatible serverless Vercel) :
 
 ### Rôles
 
-- `USER` : utilisateur standard (par défaut à l'inscription)
-- `ADMIN` : administrateur (à définir manuellement en base)
+4 rôles hiérarchiques : `USER < NURSE < DOCTOR < ADMIN`
+
+| Rôle | Description | Capacités |
+|------|-------------|-----------|
+| **USER** | Utilisateur standard | Gère son dossier, RDV, communauté |
+| **NURSE** | Infirmier(ère) | + Consulte dossiers patients, gère RDV |
+| **DOCTOR** | Médecin | + Écrit dossiers, prescriptions, vaccinations |
+| **ADMIN** | Administrateur | + Gestion utilisateurs, modération |
+
+Les rôles sont gérés via le panneau d'administration (`/admin`).
+Voir `src/lib/roles.ts` pour la matrice complète des permissions.
+
+---
+
+## 🤖 Chat Médecin IA
+
+Le chat médecin utilise **z-ai-web-dev-sdk** (LLM côté serveur) avec un
+système de prompt médical contextualisé pour Pointe-Noire (paludisme, fièvre
+jaune, numéros d'urgence locaux, etc.).
+
+### Activation
+
+Par défaut, le chat utilise un **bot rule-based** (sans coût).
+Pour activer le LLM :
+
+```bash
+ENABLE_LLM_CHAT=true
+```
+
+Le système tombe gracieusement sur le bot rule-based en cas d'erreur LLM.
+
+### Caractéristiques
+
+- **System prompt médical** : conseils santé généralistes, jamais de diagnostic définitif
+- **Contexte Congo** : maladies locales, numéros d'urgence
+- **Historique conversation** : 10 derniers messages pour le contexte
+- **Sécurité** : recommande toujours de consulter un médecin en personne
+
+---
+
+## 🔔 Notifications Push
+
+L'application supporte les **notifications push navigateur** (Web Push API + service worker).
+
+### Configuration (optionnel)
+
+1. Générez les clés VAPID :
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+2. Ajoutez-les dans `.env` :
+   ```
+   NEXT_PUBLIC_VAPID_PUBLIC_KEY=<votre-clé-publique>
+   VAPID_PRIVATE_KEY=<votre-clé-privée>
+   ```
+
+3. Redémarrez le serveur.
+
+Les utilisateurs peuvent activer les notifications depuis **Paramètres → Notifications Push**.
 
 ---
 
@@ -215,11 +290,14 @@ git push -u origin main
 
 Dans **Settings → Environment Variables**, ajoutez :
 
-| Variable | Valeur |
-|----------|--------|
-| `DATABASE_URL` | `file:./db/custom.db` (SQLite) **ou** votre connection string PostgreSQL |
-| `JWT_SECRET` | Une chaîne aléatoire d'au moins 32 caractères (`openssl rand -base64 32`) |
-| `NEXT_PUBLIC_APP_URL` | `https://votre-app.vercel.app` |
+| Variable | Valeur | Requis |
+|----------|--------|--------|
+| `DATABASE_URL` | Connection string PostgreSQL (Neon/Supabase) | ✅ |
+| `JWT_SECRET` | Chaîne aléatoire d'au moins 32 caractères (`openssl rand -base64 32`) | ✅ |
+| `NEXT_PUBLIC_APP_URL` | `https://votre-app.vercel.app` | ✅ |
+| `ENABLE_LLM_CHAT` | `true` (pour activer le LLM) | Optionnel |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Clé publique VAPID | Optionnel |
+| `VAPID_PRIVATE_KEY` | Clé privée VAPID | Optionnel |
 
 ⚠️ **Important** : Pour la production, **utilisez PostgreSQL**. SQLite n'est
 pas adapté à Vercel (système de fichiers éphémère).
@@ -251,10 +329,27 @@ DATABASE_URL="votre-url-postgresql-production" npm run db:push
 | `npm run build` | Build de production |
 | `npm run start` | Lance le serveur de production (après build) |
 | `npm run lint` | Vérifie le code avec ESLint |
+| `npm run test` | Lance les tests (48 tests) |
 | `npm run db:push` | Synchronise le schéma Prisma avec la base |
 | `npm run db:generate` | Régénère le client Prisma |
 | `npm run db:migrate` | Crée une migration Prisma |
 | `npm run db:reset` | Réinitialise la base (⚠️ destructif) |
+
+---
+
+## 🧪 Tests
+
+48 tests couvrent les fonctionnalités critiques :
+
+- **Authentification** : hashage bcrypt, JWT signés/vérifiés, tokens invalides
+- **Validation** : schémas Zod (login, register, post, appointment, chat)
+- **Bot médical** : réponses contextuelles (fièvre, toux, paludisme, grossesse)
+- **Rôles** : permissions, hiérarchie, accès médical
+
+```bash
+npm run test
+# 48 pass — 0 fail — 92 expect() calls
+```
 
 ---
 
@@ -263,12 +358,13 @@ DATABASE_URL="votre-url-postgresql-production" npm run db:push
 ### Mesures implémentées
 
 - ✅ Mots de passe hachés (bcrypt, 10 rounds)
-- ✅ Sessions JWT en cookies `httpOnly`, `sameSite=lax`
-- ✅ Cookies sécurisés (`Secure`) en production
+- ✅ Sessions JWT en cookies `httpOnly`, `sameSite=lax`, `Secure` en HTTPS
 - ✅ Validation Zod sur toutes les entrées d'API
 - ✅ Authentification requise sur les routes protégées
 - ✅ Autorisations par propriétaire (chaque utilisateur ne voit que ses données)
-- ✅ En-têtes de sécurité (`X-Frame-Options`, `X-Content-Type-Options`, etc.)
+- ✅ Rôles hiérarchiques (USER/NURSE/DOCTOR/ADMIN) avec permissions fines
+- ✅ Anti-auto-rétrogradation (un admin ne peut pas se rétrograder lui-même)
+- ✅ En-têtes de sécurité (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`)
 - ✅ Aucune clé secrète dans le code source
 - ✅ Variables d'environnement documentées dans `.env.example`
 - ✅ `.gitignore` exclut `.env`, `db/`, `node_modules`, `.next/`
@@ -290,6 +386,7 @@ DATABASE_URL="votre-url-postgresql-production" npm run db:push
 - **Caching** des données statiques
 - **Fonts** optimisées avec `next/font`
 - **Tailwind CSS 4** : CSS minimal, purgé automatiquement
+- **LLM avec maxDuration=30s** pour rester dans les limites Vercel
 
 ---
 

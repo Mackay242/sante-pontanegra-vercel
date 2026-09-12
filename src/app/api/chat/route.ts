@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { chatSchema } from '@/lib/validators'
-import { getBotReply } from '@/lib/data/bot'
+import { getMedicalReply } from '@/lib/llm'
 import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
+// Allow up to 30s for LLM responses
+export const maxDuration = 30
 
 // POST /api/chat — send a message and get a bot reply
 export async function POST(request: Request) {
@@ -35,8 +37,16 @@ export async function POST(request: Request) {
       },
     })
 
-    // Generate bot reply (rule-based; can be replaced by LLM API server-side)
-    const botContent = getBotReply(parsed.data.message)
+    // Load conversation history (last 10 messages) for context
+    const history = await db.chatMessage.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'asc' },
+      take: 10,
+    })
+
+    // Generate bot reply (LLM if enabled, rule-based otherwise)
+    const botContent = await getMedicalReply(parsed.data.message, history)
+
     const botMsg = await db.chatMessage.create({
       data: {
         userId: user.id,

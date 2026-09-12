@@ -7,6 +7,7 @@
 import { compare, hash } from 'bcryptjs'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { cookies } from 'next/headers'
+import { hasMinimumRole, type Role } from '@/lib/roles'
 
 const SESSION_COOKIE = 'sante_session'
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7 // 7 days (seconds)
@@ -15,7 +16,7 @@ export type SessionUser = {
   id: string
   email: string
   name: string
-  role: 'USER' | 'ADMIN'
+  role: Role
 }
 
 export type SafeUser = SessionUser
@@ -62,7 +63,10 @@ export function verifySession(token: string): SessionUser | null {
       typeof payload.sub === 'string' &&
       typeof payload.email === 'string' &&
       typeof payload.name === 'string' &&
-      (payload.role === 'USER' || payload.role === 'ADMIN')
+      (payload.role === 'USER' ||
+        payload.role === 'NURSE' ||
+        payload.role === 'DOCTOR' ||
+        payload.role === 'ADMIN')
     ) {
       return {
         id: payload.sub,
@@ -129,6 +133,18 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser()
   if (user.role !== 'ADMIN') {
+    throw new Error('FORBIDDEN')
+  }
+  return user
+}
+
+/**
+ * Require at least the given role (hierarchical).
+ * Order: USER < NURSE < DOCTOR < ADMIN
+ */
+export async function requireRole(minimum: Role): Promise<SessionUser> {
+  const user = await requireUser()
+  if (!hasMinimumRole(user.role, minimum)) {
     throw new Error('FORBIDDEN')
   }
   return user

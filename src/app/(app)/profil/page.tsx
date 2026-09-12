@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Heart,
   Shield,
+  Stethoscope,
 } from 'lucide-react'
 import { AppHeader } from '@/components/layout/navbar'
 import { useAuth } from '@/components/auth-provider'
@@ -20,6 +21,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ROLE_LABELS } from '@/lib/roles'
 
 export default function ProfilPage() {
   const { user, logout } = useAuth()
@@ -44,12 +47,24 @@ export default function ProfilPage() {
             </div>
             <h2 className="mt-4 text-xl font-bold">{user.name}</h2>
             <p className="text-sm text-muted-foreground">{user.email}</p>
-            {user.role === 'ADMIN' && (
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
-                <Shield className="h-3 w-3" />
-                Administrateur
-              </span>
-            )}
+            <Badge
+              className={`mt-2 ${
+                user.role === 'ADMIN'
+                  ? 'bg-destructive/10 text-destructive'
+                  : user.role === 'DOCTOR'
+                  ? 'bg-primary/10 text-primary'
+                  : user.role === 'NURSE'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-muted text-muted-foreground'
+              }`}
+              variant="secondary"
+            >
+              {user.role === 'ADMIN' && <Shield className="mr-1 h-3 w-3" />}
+              {user.role === 'DOCTOR' && (
+                <Stethoscope className="mr-1 h-3 w-3" />
+              )}
+              {ROLE_LABELS[user.role]}
+            </Badge>
           </CardContent>
         </Card>
 
@@ -72,7 +87,7 @@ export default function ProfilPage() {
               <InfoRow
                 icon={Heart}
                 label="Rôle"
-                value={user.role === 'ADMIN' ? 'Administrateur' : 'Membre'}
+                value={ROLE_LABELS[user.role]}
               />
             </CardContent>
           </Card>
@@ -82,6 +97,19 @@ export default function ProfilPage() {
               <CardTitle className="text-base">Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              {user.role === 'ADMIN' && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between"
+                  onClick={() => router.push('/admin')}
+                >
+                  <span className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Panneau d&apos;administration
+                  </span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 className="w-full justify-between"

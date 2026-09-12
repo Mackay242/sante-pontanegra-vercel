@@ -1,12 +1,13 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import type { Role } from '@/lib/roles'
 
 export type ClientUser = {
   id: string
   name: string
   email: string
-  role: 'USER' | 'ADMIN'
+  role: Role
 }
 
 type AuthContextValue = {
@@ -45,6 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh()
+    // Register service worker for push notifications (client-side only)
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // Silent fail — push not critical
+      })
+    }
   }, [refresh])
 
   return (

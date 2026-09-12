@@ -1,21 +1,23 @@
-// Prisma schema for SantePontaNegra
-// Vercel-compatible database schema
+// Prisma schema for SantePontaNegra — PostgreSQL variant
+// Use this file when deploying to Vercel with PostgreSQL (Neon/Supabase/Vercel Postgres)
 //
-// Database provider:
-// - LOCAL DEV: SQLite (default — DATABASE_URL=file:./db/custom.db)
-// - PRODUCTION (Vercel): PostgreSQL (Neon / Supabase / Vercel Postgres)
-//
-// To switch to PostgreSQL for production:
-// 1. Set provider = "postgresql" below
+// To switch from SQLite to PostgreSQL:
+// 1. Copy this file to schema.prisma (replacing the SQLite version)
 // 2. Set DATABASE_URL to your PostgreSQL connection string
-// 3. Run `npm run db:push` to apply the schema
+// 3. Run `npm run db:push` to apply the schema to your PostgreSQL database
+//
+// Why PostgreSQL for production?
+// - Vercel serverless functions have an ephemeral filesystem (SQLite would be lost)
+// - PostgreSQL supports concurrent writes (better for multi-user)
+// - Native JSON support (instead of JSON-as-string)
+// - Better performance at scale
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -52,6 +54,7 @@ model Post {
   authorId   String
   author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   likes      Int      @default(0)
+  // In PostgreSQL we could use String[] natively, but keeping JSON for compatibility
   likedBy    String   @default("[]") // JSON array of user IDs
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -81,7 +84,7 @@ model MedicalDossier {
   userId              String   @unique
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   groupeSanguin       String?
-  allergies           String   @default("[]") // JSON array
+  allergies           String   @default("[]")
   maladiesChroniques  String   @default("[]")
   antecedents         String   @default("[]")
   medicamentsActuels  String   @default("[]")
