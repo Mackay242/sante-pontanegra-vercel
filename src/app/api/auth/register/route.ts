@@ -41,7 +41,12 @@ export async function POST(request: Request) {
       select: { id: true, email: true, name: true, role: true },
     })
 
-    await setSessionCookie(user)
+    await setSessionCookie({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role as 'USER' | 'NURSE' | 'DOCTOR' | 'ADMIN',
+    })
 
     return NextResponse.json({ user }, { status: 201 })
   } catch (err) {

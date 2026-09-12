@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Video, Play, Clock, X } from 'lucide-react'
+import { Video as VideoIcon, Play, Clock, X } from 'lucide-react'
 import { AppHeader } from '@/components/layout/navbar'
 import { VIDEO_CATEGORIES, VIDEOS, type Video } from '@/lib/data/videos'
 import { Button } from '@/components/ui/button'
@@ -77,7 +77,7 @@ export default function VideosPage() {
       {filtered.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Video className="h-10 w-10 text-muted-foreground" />
+            <VideoIcon className="h-10 w-10 text-muted-foreground" />
             <p className="mt-3 text-muted-foreground">
               Aucune vidéo dans cette catégorie.
             </p>

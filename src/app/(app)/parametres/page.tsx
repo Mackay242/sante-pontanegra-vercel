@@ -190,17 +190,17 @@ export default function ParametresPage() {
                     )}
                   </div>
                 )}
-
-                {push.status === 'denied' && (
-                  <div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                    <BellOff className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>
-                      Les notifications ont été refusées. Réinitialisez-les dans
-                      les paramètres de votre navigateur.
-                    </span>
-                  </div>
-                )}
               </>
+            )}
+
+            {push.status === 'denied' && (
+              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                <BellOff className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>
+                  Les notifications ont été refusées. Réinitialisez-les dans
+                  les paramètres de votre navigateur.
+                </span>
+              </div>
             )}
           </CardContent>
         </Card>

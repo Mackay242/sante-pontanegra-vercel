@@ -68,7 +68,9 @@ export function usePushNotifications() {
       // 3. Subscribe to push manager
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+        applicationServerKey: urlBase64ToUint8Array(
+          config.publicKey
+        ) as unknown as BufferSource,
       })
 
       // 4. Send subscription to server
