@@ -1,0 +1,157 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.75rem;
+  /* Santé Pontanegra — Light theme (medical green/blue palette) */
+  --background: #daeef6;            /* light medical blue */
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #0d7a5f;               /* santé green */
+  --primary-foreground: #ffffff;
+  --secondary: #1a5f7a;             /* médecin blue */
+  --secondary-foreground: #ffffff;
+  --muted: #f5f5f5;
+  --muted-foreground: #555555;
+  --accent: #e53935;                /* emergency red */
+  --accent-foreground: #ffffff;
+  --destructive: #e53935;
+  --border: #e0e0e0;
+  --input: #f5f5f5;
+  --ring: #0d7a5f;
+  --chart-1: #0d7a5f;
+  --chart-2: #1a5f7a;
+  --chart-3: #e53935;
+  --chart-4: #f59e0b;
+  --chart-5: #22c55e;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #0d7a5f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: #e0e0e0;
+  --sidebar-ring: #0d7a5f;
+}
+
+.dark {
+  --background: #0f1923;
+  --foreground: #f0f0f0;
+  --card: #1a2636;
+  --card-foreground: #f0f0f0;
+  --popover: #1a2636;
+  --popover-foreground: #f0f0f0;
+  --primary: #1dab84;
+  --primary-foreground: #0f1923;
+  --secondary: #1a5f7a;
+  --secondary-foreground: #ffffff;
+  --muted: #243447;
+  --muted-foreground: #b0b8c4;
+  --accent: #ef5350;
+  --accent-foreground: #ffffff;
+  --destructive: #ef5350;
+  --border: #2d4060;
+  --input: #243447;
+  --ring: #1dab84;
+  --chart-1: #1dab84;
+  --chart-2: #4a9eff;
+  --chart-3: #ef5350;
+  --chart-4: #f59e0b;
+  --chart-5: #22c55e;
+  --sidebar: #1a2636;
+  --sidebar-foreground: #f0f0f0;
+  --sidebar-primary: #1dab84;
+  --sidebar-primary-foreground: #0f1923;
+  --sidebar-accent: #243447;
+  --sidebar-accent-foreground: #f0f0f0;
+  --sidebar-border: #2d4060;
+  --sidebar-ring: #1dab84;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Better scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    opacity: 0.5;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+  }
+}
+
+@layer utilities {
+  /* Gradient backgrounds */
+  .bg-medical-gradient {
+    background: linear-gradient(135deg, #0d7a5f 0%, #1dab84 100%);
+  }
+  .bg-medical-gradient-soft {
+    background: linear-gradient(135deg, #daeef6 0%, #e3f4ec 100%);
+  }
+  .bg-emergency-gradient {
+    background: linear-gradient(135deg, #e53935 0%, #ef5350 100%);
+  }
+  /* Safe area for mobile bottom nav */
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
