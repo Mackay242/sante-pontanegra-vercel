@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/components/auth-provider'
 import { PWAInstaller } from '@/components/pwa-installer'
+import { OfflineIndicator } from '@/components/shared/offline-indicator'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -142,6 +143,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <PWAInstaller />
+            <OfflineIndicator />
           </AuthProvider>
           <Toaster />
         </ThemeProvider>
