@@ -5,10 +5,9 @@ import { getMedicalReply } from '@/lib/llm'
 import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-// Allow up to 30s for LLM responses
 export const maxDuration = 30
 
-// POST /api/chat — send a message and get a bot reply
+// POST /api/chat — send a message (with optional media) and get a bot reply
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
@@ -28,12 +27,16 @@ export async function POST(request: Request) {
       )
     }
 
-    // Save user message
+    const { message, mediaUrl, mediaType } = parsed.data
+
+    // Save user message (with optional media)
     const userMsg = await db.chatMessage.create({
       data: {
         userId: user.id,
         role: 'user',
-        content: parsed.data.message,
+        content: message,
+        mediaUrl: mediaUrl || null,
+        mediaType: mediaType || null,
       },
     })
 
@@ -45,7 +48,14 @@ export async function POST(request: Request) {
     })
 
     // Generate bot reply (LLM if enabled, rule-based otherwise)
-    const botContent = await getMedicalReply(parsed.data.message, history)
+    // If user sent an image, the bot acknowledges it
+    let userMessageForBot = message
+    if (mediaType === 'image' && mediaUrl) {
+      userMessageForBot = `[L'utilisateur a envoyé une photo] ${message}`
+    } else if (mediaType === 'audio') {
+      userMessageForBot = `[L'utilisateur a envoyé un message vocal] ${message || '(message audio)'}`
+    }
+    const botContent = await getMedicalReply(userMessageForBot, history)
 
     const botMsg = await db.chatMessage.create({
       data: {
@@ -68,7 +78,7 @@ export async function POST(request: Request) {
   }
 }
 
-// GET /api/chat — load conversation history
+// GET /api/chat — load conversation history (with media)
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) {

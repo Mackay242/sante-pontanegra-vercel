@@ -36,7 +36,8 @@ export const postSchema = z.object({
   content: z.string().min(5, 'Contenu trop court').max(5000, 'Contenu trop long'),
   category: z.enum(['general', 'sante', 'maternite', 'urgence', 'nutrition']).default('general'),
   postType: z.enum(['post', 'question', 'alert']).default('post'),
-  mediaUrl: z.string().url('URL invalide').optional().or(z.literal('')),
+  // Media: either URL (YouTube/MP4) or base64 data URL (uploaded from phone)
+  mediaUrl: z.string().max(5_000_000, 'Média trop volumineux (max 5MB)').optional().or(z.literal('')),
   mediaType: z.enum(['image', 'video', 'youtube']).optional(),
 })
 export type PostInput = z.infer<typeof postSchema>
@@ -62,8 +63,23 @@ export type AppointmentInput = z.infer<typeof appointmentSchema>
 
 export const chatSchema = z.object({
   message: z.string().min(1, 'Message vide').max(1000, 'Message trop long'),
+  // Optional media (base64 data URL or external URL)
+  mediaUrl: z.string().max(5_000_000, 'Média trop volumineux (max 5MB)').optional().or(z.literal('')),
+  mediaType: z.enum(['image', 'audio', 'video']).optional(),
 })
 export type ChatInput = z.infer<typeof chatSchema>
+
+// ─── Consultation schemas ────────────────────────────────────
+
+export const consultationMessageSchema = z.object({
+  content: z.string().max(2000, 'Message trop long').optional().or(z.literal('')),
+  mediaUrl: z.string().max(5_000_000, 'Média trop volumineux (max 5MB)').optional().or(z.literal('')),
+  mediaType: z.enum(['image', 'audio', 'video']).optional(),
+}).refine(
+  (data) => data.content?.trim() || data.mediaUrl,
+  { message: 'Message ou média requis' }
+)
+export type ConsultationMessageInput = z.infer<typeof consultationMessageSchema>
 
 export const dossierSchema = z.object({
   groupeSanguin: z

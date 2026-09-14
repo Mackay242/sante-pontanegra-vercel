@@ -38,6 +38,10 @@ model User {
   followers      Follow[]      @relation("Following")
   amaSessions    AMA[]
   amaQuestions   AMAQuestion[]
+  // Private consultations
+  consultationsAsPatient  Consultation[] @relation("ConsultationPatient")
+  consultationsAsDoctor  Consultation[] @relation("ConsultationDoctor")
+  consultationMessages   ConsultationMessage[]
 }
 
 // ─── Community Posts ───────────────────────────────────────
@@ -217,14 +221,55 @@ model Pregnancy {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   // user | bot
-  content   String
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       String   // user | bot
+  content    String
+  // Media (base64 data URL or external URL)
+  mediaUrl   String?
+  mediaType  String?  // image | audio | video
+  createdAt  DateTime @default(now())
 
   @@index([userId])
+}
+
+// ─── Private consultations (patient → doctor) ──────────────
+
+model Consultation {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     User     @relation("ConsultationPatient", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId    String
+  doctor      User     @relation("ConsultationDoctor", fields: [doctorId], references: [id], onDelete: Cascade)
+  status      String   @default("active") // active | closed
+  subject     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages    ConsultationMessage[]
+
+  @@unique([patientId, doctorId]) // one active consultation per patient-doctor pair
+  @@index([patientId])
+  @@index([doctorId])
+}
+
+model ConsultationMessage {
+  id              String   @id @default(cuid())
+  consultationId  String
+  consultation    Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content         String?
+  // Media (base64 data URL or external URL)
+  mediaUrl        String?
+  mediaType       String?  // image | audio | video
+  isFromDoctor    Boolean  @default(false)
+  readAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([consultationId])
+  @@index([senderId])
 }
 
 // ─── Push notifications ─────────────────────────────────────
