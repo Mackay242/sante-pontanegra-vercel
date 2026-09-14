@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { name, phone, email, password } = parsed.data
+    const { name, phone, email, password, role, specialty, bio } = parsed.data
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
@@ -36,9 +36,11 @@ export async function POST(request: Request) {
         phone: phone.trim(),
         email: email.trim().toLowerCase(),
         passwordHash,
-        role: 'USER',
+        role: role, // USER | DOCTOR | NURSE
+        specialty: role !== 'USER' ? (specialty?.trim() || null) : null,
+        bio: bio?.trim() || null,
       },
-      select: { id: true, email: true, name: true, role: true },
+      select: { id: true, email: true, name: true, role: true, specialty: true },
     })
 
     await setSessionCookie({

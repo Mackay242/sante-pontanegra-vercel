@@ -24,11 +24,31 @@ export const registerSchema = z
     email: z.string().email('Adresse email invalide'),
     password: z.string().min(6, 'Mot de passe requis (min. 6 caractères)'),
     confirm: z.string(),
+    // Role selection
+    role: z.enum(['USER', 'DOCTOR', 'NURSE']).default('USER'),
+    specialty: z
+      .string()
+      .max(100, 'Spécialité trop longue')
+      .optional()
+      .or(z.literal('')),
+    bio: z
+      .string()
+      .max(300, 'Bio trop longue')
+      .optional()
+      .or(z.literal('')),
   })
   .refine((data) => data.password === data.confirm, {
     message: 'Les mots de passe ne correspondent pas',
     path: ['confirm'],
   })
+  .refine(
+    (data) =>
+      data.role === 'USER' || (data.specialty !== undefined && data.specialty.trim().length > 0),
+    {
+      message: 'Spécialité requise pour les médecins et infirmiers',
+      path: ['specialty'],
+    }
+  )
 export type RegisterInput = z.infer<typeof registerSchema>
 
 export const postSchema = z.object({
