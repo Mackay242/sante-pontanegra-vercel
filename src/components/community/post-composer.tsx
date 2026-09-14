@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Send, Loader2, Video, Image as ImageIcon, Link2, X, Camera, Film } from 'lucide-react'
+import { Send, Loader2, Camera, Film, Image as ImageIcon, Link2, X, Video as VideoIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,7 +35,7 @@ const POST_TYPES: Array<{ id: PostType; label: string; emoji: string }> = [
   { id: 'alert', label: 'Alerte', emoji: '🚨' },
 ]
 
-// Max file size: 5 MB (base64 makes it ~33% larger, so 5MB binary → 6.6MB base64)
+// Max file size: 5 MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 export function PostComposer({
@@ -65,11 +65,23 @@ export function PostComposer({
   const [mediaUrl, setMediaUrl] = useState('')
   const [mediaType, setMediaType] = useState<string | undefined>(undefined)
   const [mediaSource, setMediaSource] = useState<'url' | 'file' | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  // Refs for file inputs
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const mediaInfo = mediaUrl ? detectMediaType(mediaUrl) : null
+
+  function triggerPhotoPicker() {
+    photoInputRef.current?.click()
+  }
+  function triggerVideoPicker() {
+    videoInputRef.current?.click()
+  }
+  function triggerGalleryPicker() {
+    galleryInputRef.current?.click()
+  }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -90,7 +102,7 @@ export function PostComposer({
       setMediaUrl(result)
       if (file.type.startsWith('image/')) setMediaType('image')
       else if (file.type.startsWith('video/')) setMediaType('video')
-      else if (file.type.startsWith('audio/')) setMediaType('video')
+      else setMediaType('image')
       setMediaSource('file')
     }
     reader.readAsDataURL(file)
@@ -99,6 +111,9 @@ export function PostComposer({
       title: 'Média ajouté',
       description: `${file.type.split('/')[0].toUpperCase()} (${(file.size / 1024 / 1024).toFixed(1)} MB)`,
     })
+
+    // Reset input value to allow re-selecting same file
+    e.target.value = ''
   }
 
   function handleUrlInput(url: string) {
@@ -113,9 +128,6 @@ export function PostComposer({
     setMediaType(undefined)
     setMediaSource(null)
     setShowMediaInput(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-    if (cameraInputRef.current) cameraInputRef.current.value = ''
-    if (videoInputRef.current) videoInputRef.current.value = ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -236,79 +248,76 @@ export function PostComposer({
           {/* Media section */}
           <div className="space-y-2">
             <Label>Média (photo / vidéo)</Label>
+
+            {/* Hidden file inputs */}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              capture="environment"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
             {!showMediaInput && !mediaUrl && (
-              <div className="flex flex-wrap gap-2">
-                {/* Prendre une photo */}
-                <label className="cursor-pointer">
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="cursor-pointer"
-                  >
-                    <Camera className="mr-1 h-4 w-4" />
-                    Prendre une photo
-                  </Button>
-                </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={triggerPhotoPicker}
+                  className="flex flex-col items-center gap-1 py-3 h-auto"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="text-[10px]">Photo</span>
+                </Button>
 
-                {/* Filmer une vidéo */}
-                <label className="cursor-pointer">
-                  <input
-                    ref={videoInputRef}
-                    type="file"
-                    accept="video/*"
-                    capture="environment"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="cursor-pointer"
-                  >
-                    <Film className="mr-1 h-4 w-4" />
-                    Filmer une vidéo
-                  </Button>
-                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={triggerVideoPicker}
+                  className="flex flex-col items-center gap-1 py-3 h-auto"
+                >
+                  <VideoIcon className="h-5 w-5" />
+                  <span className="text-[10px]">Vidéo</span>
+                </Button>
 
-                {/* Choisir depuis la galerie */}
-                <label className="cursor-pointer">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="cursor-pointer"
-                  >
-                    <ImageIcon className="mr-1 h-4 w-4" />
-                    Galerie
-                  </Button>
-                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={triggerGalleryPicker}
+                  className="flex flex-col items-center gap-1 py-3 h-auto"
+                >
+                  <ImageIcon className="h-5 w-5" />
+                  <span className="text-[10px]">Galerie</span>
+                </Button>
 
-                {/* Coller un lien (YouTube, Vimeo, MP4) */}
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={() => setShowMediaInput(true)}
+                  className="flex flex-col items-center gap-1 py-3 h-auto"
                 >
-                  <Link2 className="mr-1 h-4 w-4" />
-                  Coller un lien
+                  <Link2 className="h-5 w-5" />
+                  <span className="text-[10px]">Lien</span>
                 </Button>
               </div>
             )}
@@ -322,6 +331,7 @@ export function PostComposer({
                     value={mediaSource === 'url' ? mediaUrl : ''}
                     onChange={(e) => handleUrlInput(e.target.value)}
                     type="url"
+                    autoFocus
                   />
                   <Button
                     type="button"

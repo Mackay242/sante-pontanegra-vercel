@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Send, Loader2, Stethoscope, Image as ImageIcon, Mic, Square, X, Link as LinkIcon } from 'lucide-react'
+import { Send, Loader2, Stethoscope, Image as ImageIcon, Mic, Square, X, Link as LinkIcon, Video as VideoIcon, Camera } from 'lucide-react'
 import { AppHeader } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -23,6 +23,8 @@ type Message = {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
+type RecordingMode = 'audio' | 'video' | null
+
 export default function MedecinPage() {
   const { toast } = useToast()
   const [messages, setMessages] = useState<Message[]>(
@@ -30,15 +32,22 @@ export default function MedecinPage() {
   )
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [recording, setRecording] = useState(false)
   const [mediaFile, setMediaFile] = useState<string | null>(null)
   const [mediaType, setMediaType] = useState<'image' | 'audio' | 'video' | null>(null)
+
+  // Recording states
+  const [recording, setRecording] = useState<RecordingMode>(null)
   const [recordingTime, setRecordingTime] = useState(0)
+
+  // Refs
   const scrollRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const videoPreviewRef = useRef<HTMLVideoElement | null>(null)
+  const videoStreamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     fetch('/api/chat', { cache: 'no-store' })
@@ -80,50 +89,77 @@ export default function MedecinPage() {
     }
     reader.readAsDataURL(file)
 
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (photoInputRef.current) photoInputRef.current.value = ''
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
 
-  async function startRecording() {
+  async function startAudioRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = recorder
-      chunksRef.current = []
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data)
-      }
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        if (blob.size > MAX_FILE_SIZE) {
-          showToast('Message audio trop long (max 5 MB)', 'destructive')
-          return
-        }
-        const reader = new FileReader()
-        reader.onload = () => {
-          setMediaFile(reader.result as string)
-          setMediaType('audio')
-        }
-        reader.readAsDataURL(blob)
-        stream.getTracks().forEach((t) => t.stop())
-      }
-
-      recorder.start()
-      setRecording(true)
-      setRecordingTime(0)
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingTime((t) => t + 1)
-      }, 1000)
+      await startRecordingInternal(stream, 'audio')
     } catch (err) {
       console.error(err)
       showToast('Microphone inaccessible', 'destructive')
     }
   }
 
+  async function startVideoRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: true,
+      })
+      // Show live preview
+      videoStreamRef.current = stream
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream
+        videoPreviewRef.current.play().catch(() => {})
+      }
+      await startRecordingInternal(stream, 'video')
+    } catch (err) {
+      console.error(err)
+      showToast('Caméra inaccessible', 'destructive')
+    }
+  }
+
+  async function startRecordingInternal(stream: MediaStream, mode: RecordingMode) {
+    const recorder = new MediaRecorder(stream)
+    mediaRecorderRef.current = recorder
+    chunksRef.current = []
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data)
+    }
+
+    recorder.onstop = () => {
+      const mimeType = mode === 'video' ? 'video/webm' : 'audio/webm'
+      const blob = new Blob(chunksRef.current, { type: mimeType })
+      if (blob.size > MAX_FILE_SIZE) {
+        showToast(`${mode === 'video' ? 'Vidéo' : 'Message audio'} trop long (max 5 MB)`, 'destructive')
+      } else {
+        const reader = new FileReader()
+        reader.onload = () => {
+          setMediaFile(reader.result as string)
+          setMediaType(mode === 'video' ? 'video' : 'audio')
+        }
+        reader.readAsDataURL(blob)
+      }
+      // Stop camera stream
+      stream.getTracks().forEach((t) => t.stop())
+      videoStreamRef.current = null
+    }
+
+    recorder.start()
+    setRecording(mode)
+    setRecordingTime(0)
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingTime((t) => t + 1)
+    }, 1000)
+  }
+
   function stopRecording() {
     mediaRecorderRef.current?.stop()
-    setRecording(false)
+    setRecording(null)
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current)
       recordingTimerRef.current = null
@@ -265,8 +301,51 @@ export default function MedecinPage() {
           )}
         </div>
 
-        {/* Media preview */}
-        {mediaFile && (
+        {/* Live video preview during recording */}
+        {recording === 'video' && (
+          <div className="border-t bg-black p-2">
+            <div className="relative">
+              <video
+                ref={videoPreviewRef}
+                autoPlay
+                muted
+                playsInline
+                className="max-h-40 w-full rounded-lg"
+              />
+              <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-red-600 px-2 py-1 text-xs font-bold text-white">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                REC {formatDuration(recordingTime)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Audio recording indicator */}
+        {recording === 'audio' && (
+          <div className="flex items-center justify-between border-t bg-red-50 p-2 dark:bg-red-950/30">
+            <div className="flex items-center gap-2 text-sm text-red-600">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
+              <span>🎤 Enregistrement audio… {formatDuration(recordingTime)}</span>
+            </div>
+            <Button size="sm" variant="destructive" onClick={stopRecording}>
+              <Square className="mr-1 h-3 w-3" />
+              Arrêter
+            </Button>
+          </div>
+        )}
+
+        {/* Stop button for video recording */}
+        {recording === 'video' && (
+          <div className="flex justify-center border-t bg-card p-2">
+            <Button size="sm" variant="destructive" onClick={stopRecording}>
+              <Square className="mr-1 h-3 w-3" />
+              Arrêter et envoyer
+            </Button>
+          </div>
+        )}
+
+        {/* Media preview (before sending) */}
+        {mediaFile && !recording && (
           <div className="border-t bg-card p-2">
             <div className="relative inline-block">
               <MediaDisplay url={mediaFile} type={mediaType ?? undefined} className="max-h-32" />
@@ -284,44 +363,71 @@ export default function MedecinPage() {
           </div>
         )}
 
-        {/* Recording indicator */}
-        {recording && (
-          <div className="flex items-center justify-between border-t bg-red-50 p-2 dark:bg-red-950/30">
-            <div className="flex items-center gap-2 text-sm text-red-600">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
-              <span>Enregistrement… {formatDuration(recordingTime)}</span>
-            </div>
-            <Button size="sm" variant="destructive" onClick={stopRecording}>
-              <Square className="mr-1 h-3 w-3" />
-              Arrêter
-            </Button>
-          </div>
-        )}
+        {/* Hidden file inputs */}
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*,video/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
 
-        {/* Input */}
-        <form onSubmit={handleSubmit} className="flex items-end gap-2 border-t bg-card p-3">
-          <label className="cursor-pointer">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              capture="environment"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-muted">
-              <ImageIcon className="h-4 w-4" />
-            </div>
-          </label>
-
+        {/* Input bar */}
+        <form onSubmit={handleSubmit} className="flex items-end gap-1 border-t bg-card p-2">
+          {/* Photo button */}
           <Button
             type="button"
             size="icon"
-            variant={recording ? 'destructive' : 'outline'}
-            onClick={recording ? stopRecording : startRecording}
+            variant="outline"
+            onClick={() => photoInputRef.current?.click()}
             className="h-10 w-10"
+            title="Prendre une photo"
           >
-            {recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            <Camera className="h-4 w-4" />
+          </Button>
+
+          {/* Video recording button */}
+          <Button
+            type="button"
+            size="icon"
+            variant={recording === 'video' ? 'destructive' : 'outline'}
+            onClick={recording === 'video' ? stopRecording : startVideoRecording}
+            className="h-10 w-10"
+            title="Enregistrer une vidéo"
+          >
+            <VideoIcon className="h-4 w-4" />
+          </Button>
+
+          {/* Audio recording button */}
+          <Button
+            type="button"
+            size="icon"
+            variant={recording === 'audio' ? 'destructive' : 'outline'}
+            onClick={recording === 'audio' ? stopRecording : startAudioRecording}
+            className="h-10 w-10"
+            title="Enregistrer un message audio"
+          >
+            <Mic className="h-4 w-4" />
+          </Button>
+
+          {/* Gallery button */}
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={() => galleryInputRef.current?.click()}
+            className="h-10 w-10"
+            title="Choisir depuis la galerie"
+          >
+            <ImageIcon className="h-4 w-4" />
           </Button>
 
           <Textarea
@@ -337,7 +443,7 @@ export default function MedecinPage() {
               }
             }}
           />
-          <Button type="submit" size="icon" disabled={(!input.trim() && !mediaFile) || loading}>
+          <Button type="submit" size="icon" disabled={(!input.trim() && !mediaFile) || loading || !!recording}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </form>
