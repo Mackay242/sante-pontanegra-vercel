@@ -49,3 +49,15 @@ server.log
 .idea
 .vscode
 *.swp
+
+# Capacitor / Android
+*.keystore
+keystore.properties
+android/app/build/
+android/.gradle/
+android/captures/
+android/local.properties
+android/app/release/
+*.apk
+*.aab
+*.ipa
