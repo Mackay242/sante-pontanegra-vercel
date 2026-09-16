@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Paperclip, Camera, Video as VideoIcon, Mic, Image as ImageIcon, X } from 'lucide-react'
+import { Paperclip, Camera, Video as VideoIcon, Image as ImageIcon, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -98,17 +98,6 @@ export function MediaPicker({
               <VideoIcon className="h-5 w-5" />
             </div>
             <span className="text-[10px] font-medium">Vidéo</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onAudioRecord() }}
-            className="flex flex-col items-center gap-1 rounded-xl p-3 transition hover:bg-muted tap-feedback"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-orange-600">
-              <Mic className="h-5 w-5" />
-            </div>
-            <span className="text-[10px] font-medium">Audio</span>
           </button>
 
           <button

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Send, Loader2, X, ArrowLeft, Square } from 'lucide-react'
+import { Send, Loader2, X, ArrowLeft, Square, Mic } from 'lucide-react'
 import { AppHeader } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -358,6 +358,22 @@ export default function ConsultationPage() {
             className="resize-none"
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
           />
+          {/* Mic button (next to send, WhatsApp-style) */}
+          <Button
+            type="button"
+            size="icon"
+            variant={recording === 'audio' ? 'destructive' : 'outline'}
+            onClick={recording === 'audio' ? stopRecording : startAudioRecording}
+            disabled={sending || recording === 'video'}
+            className="h-10 w-10"
+            title="Message vocal"
+          >
+            {recording === 'audio' ? (
+              <Square className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
           <Button type="submit" size="icon" disabled={(!input.trim() && !mediaFile) || sending || !!recording}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
