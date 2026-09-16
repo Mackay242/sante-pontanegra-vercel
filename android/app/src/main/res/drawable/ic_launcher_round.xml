@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Santé Pontanegra — Round app icon (vector drawable)
+  Green circle + white heart
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    
+    <!-- Background: green circle -->
+    <path
+        android:fillColor="#0d7a5f"
+        android:pathData="M256,0 C397.385,0 512,114.615 512,256 C512,397.385 397.385,512 256,512 C114.615,512 0,397.385 0,256 C0,114.615 114.615,0 256,0 Z" />
+    
+    <!-- Heart: white, centered -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M256,416 C200,380 144,340 144,272 C144,232 176,200 216,200 C240,200 261,212 256,232 C261,212 272,200 296,200 C336,200 368,232 368,272 C368,340 312,380 256,416 Z" />
+</vector>
