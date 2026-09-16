@@ -36,12 +36,27 @@ export async function GET(
       )
     }
 
-    // Get or create consultation
+    // Doctor info to include in response
+    const doctorSelect = {
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        specialty: true,
+        avatarUrl: true,
+      },
+    }
+
+    // Get or create consultation — INCLUDE doctor relation!
     const existing = await db.consultation.findUnique({
       where: {
         patientId_doctorId: { patientId: user.id, doctorId },
       },
       include: {
+        doctor: doctorSelect,
+        patient: {
+          select: { id: true, name: true, role: true, specialty: true, avatarUrl: true },
+        },
         messages: {
           orderBy: { createdAt: 'asc' },
           take: 100,
@@ -53,7 +68,7 @@ export async function GET(
       return NextResponse.json({ consultation: existing })
     }
 
-    // Create new consultation
+    // Create new consultation — INCLUDE doctor relation!
     const consultation = await db.consultation.create({
       data: {
         patientId: user.id,
@@ -61,6 +76,10 @@ export async function GET(
         status: 'active',
       },
       include: {
+        doctor: doctorSelect,
+        patient: {
+          select: { id: true, name: true, role: true, specialty: true, avatarUrl: true },
+        },
         messages: true,
       },
     })
@@ -69,7 +88,7 @@ export async function GET(
   } catch (err) {
     console.error('[consultations/doctor] error:', err)
     return NextResponse.json(
-      { error: 'ERREUR_INTERNE' },
+      { error: 'ERREUR_INTERNE', message: 'Erreur lors de l\'ouverture de la consultation.' },
       { status: 500 }
     )
   }
