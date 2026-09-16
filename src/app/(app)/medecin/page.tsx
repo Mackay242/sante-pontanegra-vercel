@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Send, Loader2, Stethoscope, Image as ImageIcon, Mic, Square, X, Link as LinkIcon, Video as VideoIcon, Camera } from 'lucide-react'
+import { Send, Loader2, Stethoscope, Square, X, Link as LinkIcon } from 'lucide-react'
 import { AppHeader } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
 import { MediaDisplay } from '@/components/shared/media-display'
+import { MediaPicker } from '@/components/shared/media-picker'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -363,72 +364,19 @@ export default function MedecinPage() {
           </div>
         )}
 
-        {/* Hidden file inputs */}
-        <input
-          ref={photoInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <input
-          ref={galleryInputRef}
-          type="file"
-          accept="image/*,video/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-
         {/* Input bar */}
         <form onSubmit={handleSubmit} className="flex items-end gap-1 border-t bg-card p-2">
-          {/* Photo button */}
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => photoInputRef.current?.click()}
-            className="h-10 w-10"
-            title="Prendre une photo"
-          >
-            <Camera className="h-4 w-4" />
-          </Button>
-
-          {/* Video recording button */}
-          <Button
-            type="button"
-            size="icon"
-            variant={recording === 'video' ? 'destructive' : 'outline'}
-            onClick={recording === 'video' ? stopRecording : startVideoRecording}
-            className="h-10 w-10"
-            title="Enregistrer une vidéo"
-          >
-            <VideoIcon className="h-4 w-4" />
-          </Button>
-
-          {/* Audio recording button */}
-          <Button
-            type="button"
-            size="icon"
-            variant={recording === 'audio' ? 'destructive' : 'outline'}
-            onClick={recording === 'audio' ? stopRecording : startAudioRecording}
-            className="h-10 w-10"
-            title="Enregistrer un message audio"
-          >
-            <Mic className="h-4 w-4" />
-          </Button>
-
-          {/* Gallery button */}
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => galleryInputRef.current?.click()}
-            className="h-10 w-10"
-            title="Choisir depuis la galerie"
-          >
-            <ImageIcon className="h-4 w-4" />
-          </Button>
+          <MediaPicker
+            onMediaSelect={(dataUrl, type) => {
+              setMediaFile(dataUrl)
+              setMediaType(type)
+            }}
+            onAudioRecord={startAudioRecording}
+            onVideoRecord={startVideoRecording}
+            onStopRecording={stopRecording}
+            recording={recording}
+            disabled={loading}
+          />
 
           <Textarea
             value={input}

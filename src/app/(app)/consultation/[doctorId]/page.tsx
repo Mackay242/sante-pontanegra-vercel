@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Send, Loader2, Image as ImageIcon, Mic, X, ArrowLeft, Video as VideoIcon, Camera, Square } from 'lucide-react'
+import { Send, Loader2, X, ArrowLeft, Square } from 'lucide-react'
 import { AppHeader } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { MediaDisplay } from '@/components/shared/media-display'
+import { MediaPicker } from '@/components/shared/media-picker'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -337,22 +338,18 @@ export default function ConsultationPage() {
           </div>
         )}
 
-        <input ref={photoInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
-        <input ref={galleryInputRef} type="file" accept="image/*,video/*" onChange={handleFileSelect} className="hidden" />
-
         <form onSubmit={handleSend} className="flex items-end gap-1 border-t bg-card p-2">
-          <Button type="button" size="icon" variant="outline" onClick={() => photoInputRef.current?.click()} className="h-10 w-10" title="Photo">
-            <Camera className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={recording === 'video' ? 'destructive' : 'outline'} onClick={recording === 'video' ? stopRecording : startVideoRecording} className="h-10 w-10" title="Vidéo">
-            <VideoIcon className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant={recording === 'audio' ? 'destructive' : 'outline'} onClick={recording === 'audio' ? stopRecording : startAudioRecording} className="h-10 w-10" title="Audio">
-            <Mic className="h-4 w-4" />
-          </Button>
-          <Button type="button" size="icon" variant="outline" onClick={() => galleryInputRef.current?.click()} className="h-10 w-10" title="Galerie">
-            <ImageIcon className="h-4 w-4" />
-          </Button>
+          <MediaPicker
+            onMediaSelect={(dataUrl, type) => {
+              setMediaFile(dataUrl)
+              setMediaType(type)
+            }}
+            onAudioRecord={startAudioRecording}
+            onVideoRecord={startVideoRecording}
+            onStopRecording={stopRecording}
+            recording={recording}
+            disabled={sending || !consultation}
+          />
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
